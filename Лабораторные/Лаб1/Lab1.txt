@@ -1,0 +1,16 @@
+ 
+Команда проверки, что есть нужна видеокарта:
+lspci | grep -i nvidia
+
+Команда проверки версии Линукс:
+hostnamectl
+
+Команда проверки наличия gcc:
+gcc --version
+
+Где найти CUDA:
+https://developer.nvidia.com/cuda-downloads
+
+Установка CUDA на Ubuntu:
+wget https://developer.download.nvidia.com/compute/cuda/13.1.1/local_installers/cuda_13.1.1_590.48.01_linux.runsudo sh cuda_13.1.1_590.48.01_linux.run
+
