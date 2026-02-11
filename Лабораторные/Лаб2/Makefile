@@ -1,8 +1,8 @@
 CC = gcc
 GC = nvcc
 
-LAB2A_SOURCE = lab2a
-LAB2B_SOURCE = lab2b
+LAB2A_SOURCE = src/lab2a
+LAB2B_SOURCE = src/lab2b
 
 LAB2A_TARGET = obj/lab2a
 LAB2B_TARGET = obj/lab2b
