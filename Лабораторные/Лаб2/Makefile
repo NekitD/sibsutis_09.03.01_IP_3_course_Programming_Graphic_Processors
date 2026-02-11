@@ -19,10 +19,10 @@ $(LAB2B_TARGET): $(LAB2B_SOURCE)
 	@ $(GC) $< -o $@
 
 run-2a:
-	./$(LAB2A_TARGET)
+	@ ./$(LAB2A_TARGET)
 
 run-2b:
-	./$(LAB2B_TARGET)
+	@ ./$(LAB2B_TARGET)
 
 clean:
-	rm obj/*
+	@ rm obj/*
