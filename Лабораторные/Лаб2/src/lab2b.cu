@@ -9,11 +9,21 @@ __global__ void vector_add(int *a, int *b, int n) {
     }
 }
 
+void warmup_gpu() {
+    int *d_temp;
+    cudaMalloc(&d_temp, 1024 * sizeof(int));
+    cudaFree(d_temp);
+}
+
+
 int main() {
     printf("Исследование зависимости времени выполнения на GPU от длины вектора\n");
     printf("Количество нитей = длине вектора\n\n");
+
+    warmup_gpu();
+    cudaDeviceSynchronize();
     
-    int sizes[] = {32, 64, 128, 256, 512, 1024};
+    int sizes[] = {1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576};
     int num_sizes = 6;
     
     printf("Размер\tВремя(мс)\tПропускная способность(GB/s)\n");
