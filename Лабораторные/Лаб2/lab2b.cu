@@ -1,85 +1,69 @@
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h>
-#include <math.h>
-#include <pthread.h>
+#include <cuda_runtime.h>
 
-int *a, *b;
-
-struct targ{
-    int num_thread,
-    int num_threads,
-    int length
-}
-
-void* h_Test(void* arg){
-    struct targ* s_arg = (struct targ*)arg;
-    int length = s_arg->length;
-    int offset = s_arg->num_thread*length;
-    int i;
-    for(i = 0; i < length; i++){
-        a[i+offset] += b[i+offset];
+__global__ void vector_add(int *a, int *b, int n) {
+    int i = threadIdx.x; 
+    if(i < n) {
+        a[i] += b[i];
     }
-    return NULL
 }
 
-int main()
-{
-    char prog_name[50] = "";
-    int num_of_threads = 1, vector_size = 1;
-    printf("Input program name: ");
-    scanf("%s", &prog_name);
-    printf("\nInput num of threads: ");
-    scanf("%d", &num_of_threads);
-    printf("\nInput vector size: ");
-    scanf("%d", &vector_size);
-
-    struct timeval t;
-    double start, finish;
-    double elapsed;
-
-    int i;
-    int th_n = num_of_threads;
-    int n = vector_size;
-
-    struct targ* Targs = (struct targ*)calloc(th_n, sizeof(struct targ*));
-    pthread_t* th_id = (pthread_t*)calloc(th_n, sizeof(pthread_t));
+int main() {
+    printf("Исследование зависимости времени выполнения на GPU от длины вектора\n");
+    printf("Количество нитей = длине вектора\n\n");
     
-    a = (int*)calloc(n, sizeof(int));
-    b = (int*)calloc(n, sizeof(int));
-
-    for(i = 0; i < n; i++){
-        a[i] = 2*i;
-        b[i] = 2*i + 1;
+    int sizes[] = {32, 64, 128, 256, 512, 1024};
+    int num_sizes = 6;
+    
+    printf("Размер\tВремя(мс)\tПропускная способность(GB/s)\n");
+    printf("----------------------------------------\n");
+    
+    for(int s = 0; s < num_sizes; s++) {
+        int n = sizes[s];
+        
+        int *d_a, *d_b;
+        int *h_a, *h_b;
+        
+        h_a = (int*)malloc(n * sizeof(int));
+        h_b = (int*)malloc(n * sizeof(int));
+        
+        for(int i = 0; i < n; i++) {
+            h_a[i] = i;
+            h_b[i] = i + 1;
+        }
+        
+        cudaMalloc(&d_a, n * sizeof(int));
+        cudaMalloc(&d_b, n * sizeof(int));
+        
+        cudaMemcpy(d_a, h_a, n * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_b, h_b, n * sizeof(int), cudaMemcpyHostToDevice);
+        
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        
+        cudaEventRecord(start, 0);
+        
+        vector_add<<<1, n>>>(d_a, d_b, n);
+        
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        
+        double bandwidth = (2.0 * n * sizeof(int)) / (milliseconds * 1e-3) / 1e9;
+        
+        printf("%d\t%.3f\t\t%.2f\n", n, milliseconds, bandwidth);
+        
+        cudaFree(d_a);
+        cudaFree(d_b);
+        free(h_a);
+        free(h_b);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
     }
-
-    for(i = 0; i < th_n; i++){
-        Targs[i].num_threads = th_n;
-        Targs[i].num_thread = i;
-        Targs[i].length = n/th_n;
-    }
-
-    gettimeofday(&t, NULL);
-    start = (double)t.tv_sec*1000000.0 + (double)t.tv_usec;
-    for(i = 0; i < th_n; i++){
-        pthread_create(&th_id[i], NULL, &hTest, &Targs[i]);
-    }
-    for(i = 0; i < th_n; i++){
-        pthread_join(th_id[i], NULL);
-    }
-    gettimeofday(&t, NULL);
-    finish = (double)t.tv_sec*1000000.0 + (double)t.tv_usec;
-    elapsed = (double)(finish - start)/1000.0;
-
-    printf("Elapsed time: %g ms\n", elapsed);
-
-    free(Targs);
-    free(th_id);
-
-    for(i = 0; i < n; i++){
-        printf("%d\t%d\t%d\t", i, b[i], a[i]);
-    }
-
+    
     return 0;
 }
