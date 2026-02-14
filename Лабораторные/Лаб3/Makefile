@@ -8,7 +8,7 @@ LAB3_SOURCE = src/lab3.cu
 LAB3_TARGET = obj/lab3
 
 
-.PHONY: all run-3 clean
+.PHONY: all run-3 check-3 clean
 
 all: $(LAB3_TARGET)
 
