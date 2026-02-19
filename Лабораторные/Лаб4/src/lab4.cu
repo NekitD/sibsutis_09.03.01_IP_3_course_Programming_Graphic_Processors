@@ -57,9 +57,7 @@ int main() {
     
     printf("========================================================\n");
     printf("GPU: %s\n", prop.name);
-    printf("Compute Capability: %d.%d\n", prop.major, prop.minor);
     printf("Макс. нитей в блоке: %d\n", prop.maxThreadsPerBlock);
-    printf("Количество мультипроцессоров: %d\n", prop.multiProcessorCount);
     printf("Размер вектора: %d (%.2f MB)\n", VECTOR_SIZE, (double)(VECTOR_SIZE * 3 * sizeof(int)) / (1024 * 1024));
     printf("========================================================\n\n");
     
