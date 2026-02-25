@@ -124,10 +124,7 @@ float measure_time(int threads_per_block, int *d_a, int *d_b, int *d_c, int n,
 int main() {
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
-    
-    printf("========================================================\n");
-    printf("ИССЛЕДОВАНИЕ МЕТРИК CUDA\n");
-    printf("========================================================\n");
+    printf("========================================================\n\n");
     printf("GPU: %s\n", prop.name);
     printf("Compute Capability: %d.%d\n", prop.major, prop.minor);
     printf("Макс. нитей в блоке: %d\n", prop.maxThreadsPerBlock);
@@ -168,22 +165,15 @@ int main() {
     
     int threads_per_block = 256;
     
-    printf("\n========================================================\n");
-    printf("1. ИССЛЕДОВАНИЕ ВРЕМЕНИ ВЫПОЛНЕНИЯ (Пункт 1.1)\n");
-    printf("========================================================\n");
     
     float time_normal = measure_time(threads_per_block, d_a[0], d_b[0], d_c[0], vector_size, vector_add);
-    printf("Время выполнения обычного ядра: %.6f мс\n", time_normal);
+    printf("\n\nВремя выполнения обычного ядра: %.6f мс\n", time_normal);
     
     float time_many_regs = measure_time(threads_per_block, d_a[0], d_b[0], d_c[0], vector_size, vector_add_many_registers);
-    printf("Время выполнения ядра с множеством регистров: %.6f мс\n", time_many_regs);
-    
-    printf("\n========================================================\n");
-    printf("2. ПРОПУСКНАЯ СПОСОБНОСТЬ ПАМЯТИ (Пункт 1.2)\n");
-    printf("========================================================\n");
+    printf("\nВремя выполнения ядра с множеством регистров: %.6f мс\n", time_many_regs);
     
     double bandwidth = calculate_bandwidth(vector_size, time_normal);
-    printf("\nТеоретическая пропускная способность: %.2f GB/s\n", bandwidth);
+    printf("\nПропускная способность: %.2f GB/s\n", bandwidth);
     
     for(int i = 0; i < num_vectors; i++) {
         cudaFree(d_a[i]);
