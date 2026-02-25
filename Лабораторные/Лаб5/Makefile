@@ -8,7 +8,7 @@ SOURCE = src/lab5.cu
 NCU = /opt/nvidia/nsight-compute/2024.3.2/ncu
 NCU_METRICS_BASIC = --metrics gpu__time_duration.avg
 NCU_METRICS_MEMORY = --metrics dram__bytes.sum.per_second,lts__t_bytes.sum.per_second,l1tex__t_bytes.sum.per_second
-NCU_METRICS_LOCAL = --metrics l1tex__t_sectors_pipe_lsu_mem_local_op.sum,l1tex__t_bytes_pipe_lsu_mem_local_op.sum
+NCU_METRICS_LOCAL = --metrics sm__sass_data_bytes_mem_local.sum,sm__sass_data_bytes_mem_local_op_ld.sum,sm__sass_data_bytes_mem_local_op_st.sum,smsp__sass_inst_executed_op_local.sum
 
 all: $(TARGET)
 
