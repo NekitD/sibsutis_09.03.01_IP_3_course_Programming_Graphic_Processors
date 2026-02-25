@@ -6,6 +6,12 @@
 #define MEASURE_ITERATIONS 1000
 #define VECTOR_SIZE (1 << 20)
 
+double calculate_bandwidth(int n, float time_ms) {
+    double bytes = 3.0 * n * sizeof(int);
+    double time_s = time_ms * 1e-3;
+    return bytes / time_s / 1e9;  
+}
+
 __global__ void vector_add(int *a, int *b, int *c, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(i < n) {
@@ -126,7 +132,6 @@ int main() {
     printf("Compute Capability: %d.%d\n", prop.major, prop.minor);
     printf("Макс. нитей в блоке: %d\n", prop.maxThreadsPerBlock);
     printf("Количество регистров на блок: %d\n", prop.regsPerBlock);
-    printf("Объем локальной памяти: %zu байт\n", prop.localMemSizePerBlock);
     printf("========================================================\n\n");
     
     int num_vectors, vector_size;
@@ -177,14 +182,9 @@ int main() {
     printf("2. ПРОПУСКНАЯ СПОСОБНОСТЬ ПАМЯТИ (Пункт 1.2)\n");
     printf("========================================================\n");
     
-    printf("\nЗапуск профилировщика для обычного ядра...\n");
-    fflush(stdout);
-    
     double bandwidth = calculate_bandwidth(vector_size, time_normal);
     printf("\nТеоретическая пропускная способность: %.2f GB/s\n", bandwidth);
     
-
-    printf("\nОчистка памяти...\n");
     for(int i = 0; i < num_vectors; i++) {
         cudaFree(d_a[i]);
         cudaFree(d_b[i]);
@@ -200,8 +200,6 @@ int main() {
     free(h_a);
     free(h_b);
     free(h_c);
-    
-    printf("Готово!\n");
     
     return 0;
 }
