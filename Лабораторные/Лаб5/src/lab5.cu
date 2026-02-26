@@ -144,16 +144,6 @@ int main() {
 
     printf("Время выполнения на GPU: %.6f мс\n", time_gpu);
     printf("Пропускная способность: %.2f GB/s\n", calculate_bandwidth(total_elements, time_gpu));
-
-    if(num_vectors == 3 && vector_size == 4) {
-        printf("\nПроверка по диаграмме:\n");
-        printf("Ожидаемый:    a0 a4 a8 a1 a5 a9 a2 a6 a10 a3 a7 a11\n");
-        printf("Полученный:   ");
-        for(int i = 0; i < total_elements; i++) {
-            printf("a%d ", h_output_gpu[i]);
-        }
-        printf("\n");
-    }
     
     cudaFree(d_input);
     cudaFree(d_output);
