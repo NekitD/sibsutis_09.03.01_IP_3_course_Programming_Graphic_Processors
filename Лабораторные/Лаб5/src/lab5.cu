@@ -4,96 +4,54 @@
 
 #define WARMUP_ITERATIONS 100
 #define MEASURE_ITERATIONS 1000
-#define VECTOR_SIZE (1 << 20)
 
-double calculate_bandwidth(int n, float time_ms) {
-    double bytes = 3.0 * n * sizeof(int);
-    double time_s = time_ms * 1e-3;
-    return bytes / time_s / 1e9;  
-}
-
-__global__ void vector_add(int *a, int *b, int *c, int n) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if(i < n) {
-        c[i] = a[i] + b[i];
-    }
-}
-
-__global__ void vector_add_many_registers(int *a, int *b, int *c, int n) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if(i < n) {
-        int temp0 = a[i];
-        int temp1 = b[i];
-        int temp2 = temp0 + temp1;
-        int temp3 = temp2 * 2;
-        int temp4 = temp3 / 3;
-        int temp5 = temp4 + 100;
-        int temp6 = temp5 - 50;
-        int temp7 = temp6 * temp6;
-        int temp8 = temp7 / temp7;
-        int temp9 = temp8 + temp2;
-        int temp10 = temp9 * temp1;
-        int temp11 = temp10 - temp0;
-        int temp12 = temp11 * temp11;
-        int temp13 = temp12 / 256;
-        int temp14 = temp13 + temp3;
-        int temp15 = temp14 * 2;
-        int temp16 = temp15 - 1000;
-        int temp17 = temp16 + temp4;
-        int temp18 = temp17 * temp5;
-        int temp19 = temp18 / 128;
-        int temp20 = temp19 + temp6;
-        int temp21 = temp20 * 3;
-        int temp22 = temp21 - 500;
-        int temp23 = temp22 + temp7;
-        int temp24 = temp23 * temp8;
-        int temp25 = temp24 + temp9;
-        int temp26 = temp25 * temp10;
-        int temp27 = temp26 / 64;
-        int temp28 = temp27 + temp11;
-        int temp29 = temp28 * 5;
-        int temp30 = temp29 - 200;
-        int temp31 = temp30 + temp12;
-        int temp32 = temp31 * temp13;
-        int temp33 = temp32 / 32;
-        int temp34 = temp33 + temp14;
-        int temp35 = temp34 * 7;
-        int temp36 = temp35 - 100;
-        int temp37 = temp36 + temp15;
-        int temp38 = temp37 * temp16;
-        int temp39 = temp38 / 16;
-        int temp40 = temp39 + temp17;
-        int temp41 = temp40 * 11;
-        int temp42 = temp41 - 50;
-        int temp43 = temp42 + temp18;
-        int temp44 = temp43 * temp19;
-        int temp45 = temp44 / 8;
-        int temp46 = temp45 + temp20;
-        int temp47 = temp46 * 13;
-        int temp48 = temp47 - 25;
-        int temp49 = temp48 + temp21;
-        int temp50 = temp49 * temp22;
-        int temp51 = temp50 / 4;
-        int temp52 = temp51 + temp23;
-        int temp53 = temp52 * 17;
-        int temp54 = temp53 - 10;
-        int temp55 = temp54 + temp24;
-        int temp56 = temp55 * temp25;
-        int temp57 = temp56 / 2;
-        int temp58 = temp57 + temp26;
-        int temp59 = temp58 * 19;
-        int temp60 = temp59 - 5;
+__global__ void reorder_vectors(int *input, int *output, int num_vectors, int vector_size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_elements = num_vectors * vector_size;
+    
+    if(idx < total_elements) {
+        int v = idx / vector_size;      
+        int e = idx % vector_size;        
         
-        c[i] = temp60;
+        int new_idx = e * num_vectors + v;
+        
+        output[new_idx] = input[idx];
     }
 }
 
-float measure_time(int threads_per_block, int *d_a, int *d_b, int *d_c, int n, 
-                   void (*kernel)(int*, int*, int*, int)) {
-    int blocks = (n + threads_per_block - 1) / threads_per_block;
+void reorder_vectors_cpu(int *h_input, int *h_output, int num_vectors, int vector_size) {
+    printf("\nПроверка на CPU:\n");
+    printf("Исходный массив: ");
+    for(int v = 0; v < num_vectors; v++) {
+        for(int e = 0; e < vector_size; e++) {
+            printf("%d ", h_input[v * vector_size + e]);
+        }
+        printf("| ");
+    }
+    printf("\n");
+    
+    for(int v = 0; v < num_vectors; v++) {
+        for(int e = 0; e < vector_size; e++) {
+            int idx = v * vector_size + e;
+            int new_idx = e * num_vectors + v;
+            h_output[new_idx] = h_input[idx];
+        }
+    }
+    
+    printf("Результат CPU:   ");
+    for(int i = 0; i < num_vectors * vector_size; i++) {
+        printf("%d ", h_output[i]);
+    }
+    printf("\n");
+}
+
+float measure_time(int threads_per_block, int *d_input, int *d_output, 
+                   int num_vectors, int vector_size) {
+    int total_elements = num_vectors * vector_size;
+    int blocks = (total_elements + threads_per_block - 1) / threads_per_block;
     
     for(int i = 0; i < WARMUP_ITERATIONS; i++) {
-        kernel<<<blocks, threads_per_block>>>(d_a, d_b, d_c, n);
+        reorder_vectors<<<blocks, threads_per_block>>>(d_input, d_output, num_vectors, vector_size);
     }
     cudaDeviceSynchronize();
     
@@ -104,7 +62,7 @@ float measure_time(int threads_per_block, int *d_a, int *d_b, int *d_c, int n,
     cudaEventRecord(start, 0);
     
     for(int i = 0; i < MEASURE_ITERATIONS; i++) {
-        kernel<<<blocks, threads_per_block>>>(d_a, d_b, d_c, n);
+        reorder_vectors<<<blocks, threads_per_block>>>(d_input, d_output, num_vectors, vector_size);
     }
     
     cudaEventRecord(stop, 0);
@@ -121,14 +79,20 @@ float measure_time(int threads_per_block, int *d_a, int *d_b, int *d_c, int n,
     return avg_time_ms;
 }
 
+double calculate_bandwidth(int total_elements, float time_ms) {
+    double bytes = 2.0 * total_elements * sizeof(int);
+    double time_s = time_ms * 1e-3;
+    return bytes / time_s / 1e9;
+}
+
 int main() {
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
-    printf("========================================================\n\n");
+    
+    printf("========================================================\n");
     printf("GPU: %s\n", prop.name);
     printf("Compute Capability: %d.%d\n", prop.major, prop.minor);
     printf("Макс. нитей в блоке: %d\n", prop.maxThreadsPerBlock);
-    printf("Количество регистров на блок: %d\n", prop.regsPerBlock);
     printf("========================================================\n\n");
     
     int num_vectors, vector_size;
@@ -137,59 +101,65 @@ int main() {
     printf("Введите размер вектора: ");
     scanf("%d", &vector_size);
     
-    int **h_a = (int**)malloc(num_vectors * sizeof(int*));
-    int **h_b = (int**)malloc(num_vectors * sizeof(int*));
-    int **h_c = (int**)malloc(num_vectors * sizeof(int*));
+    int total_elements = num_vectors * vector_size;
     
-    int **d_a = (int**)malloc(num_vectors * sizeof(int*));
-    int **d_b = (int**)malloc(num_vectors * sizeof(int*));
-    int **d_c = (int**)malloc(num_vectors * sizeof(int*));
+    int *h_input = (int*)malloc(total_elements * sizeof(int));
+    int *h_output_cpu = (int*)malloc(total_elements * sizeof(int));
+    int *h_output_gpu = (int*)malloc(total_elements * sizeof(int));
     
-    for(int i = 0; i < num_vectors; i++) {
-        h_a[i] = (int*)malloc(vector_size * sizeof(int));
-        h_b[i] = (int*)malloc(vector_size * sizeof(int));
-        h_c[i] = (int*)malloc(vector_size * sizeof(int));
-        
-        for(int j = 0; j < vector_size; j++) {
-            h_a[i][j] = i + j;
-            h_b[i][j] = i * j + 1;
+    for(int v = 0; v < num_vectors; v++) {
+        for(int e = 0; e < vector_size; e++) {
+            h_input[v * vector_size + e] = v * 10 + e;
         }
-        
-        cudaMalloc(&d_a[i], vector_size * sizeof(int));
-        cudaMalloc(&d_b[i], vector_size * sizeof(int));
-        cudaMalloc(&d_c[i], vector_size * sizeof(int));
-        
-        cudaMemcpy(d_a[i], h_a[i], vector_size * sizeof(int), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_b[i], h_b[i], vector_size * sizeof(int), cudaMemcpyHostToDevice);
     }
+    
+    int *d_input, *d_output;
+    cudaMalloc(&d_input, total_elements * sizeof(int));
+    cudaMalloc(&d_output, total_elements * sizeof(int));
+    
+    cudaMemcpy(d_input, h_input, total_elements * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemset(d_output, 0, total_elements * sizeof(int));
     
     int threads_per_block = 256;
+    float time_gpu = measure_time(threads_per_block, d_input, d_output, num_vectors, vector_size);
     
+    cudaMemcpy(h_output_gpu, d_output, total_elements * sizeof(int), cudaMemcpyDeviceToHost);
     
-    float time_normal = measure_time(threads_per_block, d_a[0], d_b[0], d_c[0], vector_size, vector_add);
-    printf("\n\nВремя выполнения обычного ядра: %.6f мс\n", time_normal);
+    reorder_vectors_cpu(h_input, h_output_cpu, num_vectors, vector_size);
     
-    float time_many_regs = measure_time(threads_per_block, d_a[0], d_b[0], d_c[0], vector_size, vector_add_many_registers);
-    printf("\nВремя выполнения ядра с множеством регистров: %.6f мс\n", time_many_regs);
+    printf("\nРезультат GPU:    ");
+    for(int i = 0; i < total_elements; i++) {
+        printf("%d ", h_output_gpu[i]);
+    }
+    printf("\n");
     
-    double bandwidth = calculate_bandwidth(vector_size, time_normal);
-    printf("\nПропускная способность: %.2f GB/s\n", bandwidth);
-    
-    for(int i = 0; i < num_vectors; i++) {
-        cudaFree(d_a[i]);
-        cudaFree(d_b[i]);
-        cudaFree(d_c[i]);
-        free(h_a[i]);
-        free(h_b[i]);
-        free(h_c[i]);
+    int correct = 1;
+    for(int i = 0; i < total_elements; i++) {
+        if(h_output_cpu[i] != h_output_gpu[i]) {
+            correct = 0;
+            break;
+        }
     }
     
-    free(d_a);
-    free(d_b);
-    free(d_c);
-    free(h_a);
-    free(h_b);
-    free(h_c);
+
+    printf("Время выполнения на GPU: %.6f мс\n", time_gpu);
+    printf("Пропускная способность: %.2f GB/s\n", calculate_bandwidth(total_elements, time_gpu));
+
+    if(num_vectors == 3 && vector_size == 4) {
+        printf("\nПроверка по диаграмме:\n");
+        printf("Ожидаемый:    a0 a4 a8 a1 a5 a9 a2 a6 a10 a3 a7 a11\n");
+        printf("Полученный:   ");
+        for(int i = 0; i < total_elements; i++) {
+            printf("a%d ", h_output_gpu[i]);
+        }
+        printf("\n");
+    }
+    
+    cudaFree(d_input);
+    cudaFree(d_output);
+    free(h_input);
+    free(h_output_cpu);
+    free(h_output_gpu);
     
     return 0;
 }
