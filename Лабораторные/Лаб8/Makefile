@@ -1,7 +1,6 @@
 CC = nvcc
 GENCODE = -gencode arch=compute_86,code=sm_86
 OPT = -O2
-# Раздельная компиляция
 RDC = -rdc=true
 
 CFLAGS = $(GENCODE) $(OPT) $(RDC)
@@ -11,11 +10,9 @@ TARGET = vector_add
 KERNEL_SRC = src/kernel.cu
 MAIN_SRC = src/main.cu
 
-# Создаем директорию obj
 OBJDIR = obj
 $(shell mkdir -p $(OBJDIR))
 
-# Промежуточные файлы
 KERNEL_PTX = $(OBJDIR)/kernel.ptx
 KERNEL_CUBIN = $(OBJDIR)/kernel.sm_86.cubin
 KERNEL_O = $(OBJDIR)/kernel.o
@@ -33,7 +30,6 @@ all: ptx cubin kernel_obj fatbin main_obj final
 	@echo "========================================================="
 	@ls -la $(OBJDIR)/
 
-# ШАГ 1: Компиляция в PTX
 ptx: $(KERNEL_PTX)
 
 $(KERNEL_PTX): $(KERNEL_SRC)
@@ -44,7 +40,6 @@ $(KERNEL_PTX): $(KERNEL_SRC)
 	@echo "Создан PTX файл: $@"
 	@echo ""
 
-# ШАГ 2: Компиляция в CUDA Binary (cubin)
 cubin: $(KERNEL_CUBIN)
 
 $(KERNEL_CUBIN): $(KERNEL_PTX)
@@ -55,7 +50,6 @@ $(KERNEL_CUBIN): $(KERNEL_PTX)
 	@echo "Создан cubin файл: $@"
 	@echo ""
 
-# ШАГ 3: Компиляция ядра в объектный файл с раздельной компиляцией
 kernel_obj: $(KERNEL_O)
 
 $(KERNEL_O): $(KERNEL_SRC)
@@ -66,7 +60,6 @@ $(KERNEL_O): $(KERNEL_SRC)
 	@echo "Создан объектный файл ядра: $@"
 	@echo ""
 
-# ШАГ 4: Создание fatbinary
 fatbin: $(FATBIN) $(FATBIN_C)
 
 $(FATBIN) $(FATBIN_C): $(KERNEL_CUBIN)
@@ -80,7 +73,6 @@ $(FATBIN) $(FATBIN_C): $(KERNEL_CUBIN)
 	@echo "Создан fatbin.c файл: $(FATBIN_C)"
 	@echo ""
 
-# ШАГ 5: Компиляция основного файла с раздельной компиляцией
 main_obj: $(MAIN_O)
 
 $(MAIN_O): $(MAIN_SRC)
@@ -91,7 +83,6 @@ $(MAIN_O): $(MAIN_SRC)
 	@echo "Создан объектный файл: $@"
 	@echo ""
 
-# ШАГ 6: Компиляция fatbin.c в объектный файл
 fatbin_obj: $(FATBIN_O)
 
 $(FATBIN_O): $(FATBIN_C)
@@ -102,7 +93,6 @@ $(FATBIN_O): $(FATBIN_C)
 	@echo "Создан объектный файл fatbin: $@"
 	@echo ""
 
-# ШАГ 7: Финальная компоновка (БЕЗ -dlink!)
 final: $(TARGET)
 
 $(TARGET): $(MAIN_O) $(KERNEL_O) $(FATBIN_O)
@@ -114,35 +104,30 @@ $(TARGET): $(MAIN_O) $(KERNEL_O) $(FATBIN_O)
 	@echo "Создан исполняемый файл: $@"
 	@echo ""
 
-# Запуск программы
 run: $(TARGET)
 	@echo "========================================================="
 	@echo "ЗАПУСК ПРОГРАММЫ"
 	@echo "========================================================="
 	./$(TARGET)
 
-# Показать содержимое PTX файла
 show-ptx: $(KERNEL_PTX)
 	@echo "========================================================="
 	@echo "СОДЕРЖИМОЕ PTX ФАЙЛА"
 	@echo "========================================================="
 	cat $<
 
-# Дизассемблирование cubin
 disassemble: $(KERNEL_CUBIN)
 	@echo "========================================================="
 	@echo "ДИЗАССЕМБЛИРОВАНИЕ CUBIN"
 	@echo "========================================================="
 	cuobjdump -sass $<
 
-# Показать информацию о fatbinary
 show-fatbin: $(FATBIN)
 	@echo "========================================================="
 	@echo "ИНФОРМАЦИЯ О FATBINARY"
 	@echo "========================================================="
 	cuobjdump $<
 
-# Показать символы в объектных файлах
 symbols: $(KERNEL_O) $(MAIN_O)
 	@echo "========================================================="
 	@echo "СИМВОЛЫ В ОБЪЕКТНЫХ ФАЙЛАХ"
@@ -153,22 +138,15 @@ symbols: $(KERNEL_O) $(MAIN_O)
 	@echo "Неопределённые символы в main.o (с RDC):"
 	nm -u $(MAIN_O) | grep vector_add || true
 
-# Очистка
 clean:
-	@echo "========================================================="
-	@echo "ОЧИСТКА"
-	@echo "========================================================="
-	rm -f $(OBJDIR)/* $(TARGET) *.ii *.cudafe1* *.module_id
-	@echo "Очистка завершена."
+	@ rm -f $(OBJDIR)/* $(TARGET) *.ii *.cudafe1* *.module_id
 
-# Показать все созданные файлы
 list:
 	@echo "========================================================="
 	@echo "СОЗДАННЫЕ ФАЙЛЫ"
 	@echo "========================================================="
 	ls -la $(OBJDIR)/
 
-# Упрощённая рабочая версия (для проверки)
 simple:
 	@echo "========================================================="
 	@echo "УПРОЩЁННАЯ КОМПИЛЯЦИЯ (для проверки)"
