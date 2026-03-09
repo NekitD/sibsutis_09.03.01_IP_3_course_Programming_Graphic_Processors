@@ -61,7 +61,7 @@ def main():
     print(f"  Размер матриц: {M} x {N}")
     print(f"  Время: {end - start:.6f} сек")
     print(f"  Производительность: {2.0 * M * N * K / (end - start) / 1e9:.2f} GFLOPS")
-    print(f"  Проверка: C[0,0] = {h_C[0,0]:.1f} (ожидается {K:.1f})")
+    #print(f"  Проверка: C[0,0] = {h_C[0,0]:.1f} (ожидается {K:.1f})")
 
 if __name__ == "__main__":
     main()

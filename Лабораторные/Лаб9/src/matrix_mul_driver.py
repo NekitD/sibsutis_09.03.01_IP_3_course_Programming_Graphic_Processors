@@ -88,8 +88,8 @@ def main():
     print("========================================================")
     print("CUDA Driver API (Python) - Matrix Multiplication")
     print("========================================================")
-    print(f"Matrix sizes: M={M}, N={N}, K={K}")
-    print(f"Memory: A={M*K*4/1024/1024:.2f} MB, B={K*N*4/1024/1024:.2f} MB, C={M*N*4/1024/1024:.2f} MB")
+    print(f"Размер матриц: M={M}, N={N}, K={K}")
+    print(f"Память: A={M*K*4/1024/1024:.2f} MB, B={K*N*4/1024/1024:.2f} MB, C={M*N*4/1024/1024:.2f} MB")
     
     check_cuda(cuInit(0), "cuInit")
     
@@ -98,7 +98,7 @@ def main():
     
     device_name = create_string_buffer(256)
     cuDeviceGetName(device_name, 256, device)
-    print(f"Device: {device_name.value.decode()}")
+    print(f"Устройство: {device_name.value.decode()}")
     
     context = c_void_p()
     check_cuda(cuCtxCreate(byref(context), 0, device), "cuCtxCreate")
@@ -107,11 +107,11 @@ def main():
     
     cubin_path = b"matrix_mul_kernel.sm_86.cubin"
     if os.path.exists(cubin_path):
-        print(f"Loading cubin: {cubin_path}")
+        #print(f"Loading cubin: {cubin_path}")
         check_cuda(cuModuleLoad(byref(module), cubin_path), "cuModuleLoad cubin")
     else:
         ptx_path = b"matrix_mul_kernel.ptx"
-        print(f"Cubin not found, loading PTX: {ptx_path}")
+        #print(f"Cubin not found, loading PTX: {ptx_path}")
         check_cuda(cuModuleLoad(byref(module), ptx_path), "cuModuleLoad PTX")
     
     kernel = c_void_p()
@@ -135,9 +135,9 @@ def main():
     grid_x = (N + block_size - 1) // block_size
     grid_y = (M + block_size - 1) // block_size
     
-    print(f"\nKernel launch configuration:")
-    print(f"  Grid: {grid_x} x {grid_y} x 1")
-    print(f"  Block: {block_size} x {block_size} x 1")
+    #print(f"\nKernel launch configuration:")
+    #print(f"  Grid: {grid_x} x {grid_y} x 1")
+    #print(f"  Block: {block_size} x {block_size} x 1")
     
     m_val = c_int(M)
     n_val = c_int(N)
@@ -173,10 +173,9 @@ def main():
     elapsed = end - start
     gflops = 2.0 * M * N * K / elapsed / 1e9
     
-    print(f"\nRESULTS:")
-    print(f"  Time: {elapsed:.6f} sec")
-    print(f"  Performance: {gflops:.2f} GFLOPS")
-    print(f"  Verification: C[0][0] = {h_C[0,0]:.2f} (expected {K:.2f})")
+    print(f"  Время: {elapsed:.6f} сек")
+    print(f"  Производительность: {gflops:.2f} GFLOPS")
+    #print(f"  Verification: C[0][0] = {h_C[0,0]:.2f} (expected {K:.2f})")
     
     cuMemFree(d_A)
     cuMemFree(d_B)

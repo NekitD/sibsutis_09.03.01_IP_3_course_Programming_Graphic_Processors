@@ -35,8 +35,8 @@ int main(int argc, char* argv[]) {
     printf("========================================================\n");
     printf("CUDA Driver API (C++) - Matrix Multiplication\n");
     printf("========================================================\n");
-    printf("Matrix sizes: M=%d, N=%d, K=%d\n", M, N, K);
-    printf("Memory: A=%.2f MB, B=%.2f MB, C=%.2f MB\n", 
+    printf("Размер матриц: M=%d, N=%d, K=%d\n", M, N, K);
+    printf("Память: A=%.2f MB, B=%.2f MB, C=%.2f MB\n", 
            size_A/(1024.0*1024.0), size_B/(1024.0*1024.0), size_C/(1024.0*1024.0));
     
     CHECK_CUDA(cuInit(0));
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     
     char device_name[256];
     cuDeviceGetName(device_name, sizeof(device_name), device);
-    printf("Device: %s\n", device_name);
+    printf("Устройство: %s\n", device_name);
     
     CUcontext context;
     CHECK_CUDA(cuCtxCreate(&context, 0, device));
@@ -81,9 +81,9 @@ int main(int argc, char* argv[]) {
     int grid_x = (N + block_size - 1) / block_size;
     int grid_y = (M + block_size - 1) / block_size;
     
-    printf("\nKernel launch configuration:\n");
-    printf("  Grid: %d x %d x 1\n", grid_x, grid_y);
-    printf("  Block: %d x %d x 1\n", block_size, block_size);
+    //printf("\nKernel launch configuration:\n");
+    //printf("  Grid: %d x %d x 1\n", grid_x, grid_y);
+    //printf("  Block: %d x %d x 1\n", block_size, block_size);
     
     CHECK_CUDA(cuLaunchKernel(kernel, grid_x, grid_y, 1, block_size, block_size, 1,  0, NULL, kernel_params, NULL));                     
     CHECK_CUDA(cuCtxSynchronize());
@@ -100,11 +100,10 @@ int main(int argc, char* argv[]) {
     double elapsed = end - start;
     double gflops = 2.0 * M * N * K / elapsed / 1e9;
     
-    printf("\nRESULTS:\n");
-    printf("  Time: %.6f sec\n", elapsed);
-    printf("  Performance: %.2f GFLOPS\n", gflops);
-    printf("  Verification: C[0][0] = %.2f (expected %.2f)\n", 
-           h_C[0], (float)K);
+    printf("  Время: %.6f sec\n", elapsed);
+    printf("  Производительность: %.2f GFLOPS\n", gflops);
+    //printf("  Verification: C[0][0] = %.2f (expected %.2f)\n", 
+    //       h_C[0], (float)K);
 
     cuMemFree(d_A);
     cuMemFree(d_B);
