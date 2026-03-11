@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
     printf("\nРЕЗУЛЬТАТЫ:\n");
     printf("  Результат: %.2f (ожидается %.2f)\n", result, (float)n);
     printf("  Время: %.6f сек\n", elapsed);
-    printf("  Производительность: %.2f GFLOPS\n", gflops);
+    //printf("  Производительность: %.2f GFLOPS\n", gflops);
     
     free(h_a);
     free(h_b);

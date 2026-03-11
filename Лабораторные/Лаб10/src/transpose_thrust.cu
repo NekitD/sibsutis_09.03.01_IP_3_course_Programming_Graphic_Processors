@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     double mem_size = (double)(rows * cols * sizeof(float)) / (1024 * 1024);
     
     printf("========================================================\n");
-    printf("ТРАНСПОНИРОВАНИЕ МАТРИЦЫ (Thrust - оптимальная версия)\n");
+    printf("ТРАНСПОНИРОВАНИЕ МАТРИЦЫ (Thrust)\n");
     printf("========================================================\n");
     printf("Размер матрицы: %d x %d\n", rows, cols);
     printf("Память: %.2f MB\n", mem_size);
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     
     printf("\nРЕЗУЛЬТАТЫ:\n");
     printf("  Время: %.6f сек\n", elapsed);
-    printf("  Пропускная способность: %.2f GB/s\n", bandwidth);
+    //printf("  Пропускная способность: %.2f GB/s\n", bandwidth);
     printf("  Проверка: input[0][1]=%.0f -> output[1][0]=%.0f\n", 
            h_input[1], h_output[rows]);
     

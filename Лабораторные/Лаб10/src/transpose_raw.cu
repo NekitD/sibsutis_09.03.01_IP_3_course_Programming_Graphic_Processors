@@ -99,8 +99,8 @@ int main(int argc, char* argv[]) {
     
     printf("\nNaive версия:\n");
     printf("  Время: %.6f сек\n", end - start);
-    printf("  Пропускная способность: %.2f GB/s\n", 
-           2.0 * rows * cols * sizeof(float) / (end - start) / 1e9);
+    //printf("  Пропускная способность: %.2f GB/s\n", 
+    //       2.0 * rows * cols * sizeof(float) / (end - start) / 1e9);
     
     start = get_time();
     transpose_raw(rows, cols, h_input, h_output, 1);
@@ -108,11 +108,11 @@ int main(int argc, char* argv[]) {
     
     printf("\nShared memory версия:\n");
     printf("  Время: %.6f сек\n", end - start);
-    printf("  Пропускная способность: %.2f GB/s\n", 
-           2.0 * rows * cols * sizeof(float) / (end - start) / 1e9);
-    printf("  Ускорение: %.2fx\n", 
-           (2.0 * rows * cols * sizeof(float) / (end - start) / 1e9) /
-           (2.0 * rows * cols * sizeof(float) / (0.1) / 1e9)); 
+    //printf("  Пропускная способность: %.2f GB/s\n", 
+     //      2.0 * rows * cols * sizeof(float) / (end - start) / 1e9);
+    //printf("  Ускорение: %.2fx\n", 
+     //      (2.0 * rows * cols * sizeof(float) / (end - start) / 1e9) /
+     //      (2.0 * rows * cols * sizeof(float) / (0.1) / 1e9)); 
     
     printf("\nПроверка: input[0][1]=%.0f -> output[1][0]=%.0f\n", 
            h_input[1], h_output[rows]);
