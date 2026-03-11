@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
     printf("CUDA Runtime API:\n");
     printf("  Размер матриц: %d x %d\n", M, N);
     printf("  Время: %.6f сек\n", end - start);
-    printf("  Производительность: %.2f GFLOPS\n", 2.0 * M * N * K / (end - start) / 1e9);
+    //printf("  Производительность: %.2f GFLOPS\n", 2.0 * M * N * K / (end - start) / 1e9);
     
     cudaFree(d_A);
     cudaFree(d_B);

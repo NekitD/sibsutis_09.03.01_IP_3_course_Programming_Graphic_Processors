@@ -174,8 +174,8 @@ def main():
     gflops = 2.0 * M * N * K / elapsed / 1e9
     
     print(f"  Время: {elapsed:.6f} сек")
-    print(f"  Производительность: {gflops:.2f} GFLOPS")
-    #print(f"  Verification: C[0][0] = {h_C[0,0]:.2f} (expected {K:.2f})")
+    #print(f"  Производительность: {gflops:.2f} GFLOPS")
+    print(f"  Проверка: C[0][0] = {h_C[0,0]:.2f} (ожидалось {K:.2f})")
     
     cuMemFree(d_A)
     cuMemFree(d_B)

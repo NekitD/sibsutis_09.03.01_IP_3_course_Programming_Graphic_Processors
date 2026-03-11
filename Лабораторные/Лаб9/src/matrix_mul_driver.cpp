@@ -100,10 +100,10 @@ int main(int argc, char* argv[]) {
     double elapsed = end - start;
     double gflops = 2.0 * M * N * K / elapsed / 1e9;
     
-    printf("  Время: %.6f sec\n", elapsed);
-    printf("  Производительность: %.2f GFLOPS\n", gflops);
-    //printf("  Verification: C[0][0] = %.2f (expected %.2f)\n", 
-    //       h_C[0], (float)K);
+    printf("  Время: %.6f сек\n", elapsed);
+    //printf("  Производительность: %.2f GFLOPS\n", gflops);
+    printf("  Проверка: C[0][0] = %.2f (ожидалось %.2f)\n", 
+           h_C[0], (float)K);
 
     cuMemFree(d_A);
     cuMemFree(d_B);
