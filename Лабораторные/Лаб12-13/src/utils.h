@@ -8,22 +8,6 @@
 #include <sys/time.h>
 #include <cuda_fp16.h>
 
-#define CUDA_CHECK(call) { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-        printf("CUDA Error: %s at %s:%d\n", cudaGetErrorString(err), __FILE__, __LINE__); \
-        exit(1); \
-    } \
-}
-
-#define CUBLAS_CHECK(call) { \
-    cublasStatus_t stat = call; \
-    if (stat != CUBLAS_STATUS_SUCCESS) { \
-        printf("cuBLAS Error: %d at %s:%d\n", stat, __FILE__, __LINE__); \
-        exit(1); \
-    } \
-}
-
 double get_time() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
