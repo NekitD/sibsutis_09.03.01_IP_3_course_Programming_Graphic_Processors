@@ -70,9 +70,8 @@ int main(int argc, char* argv[]) {
     }
     
     printf("========================================================\n");
-    printf("CUBLAS С ТЕНЗОРНЫМИ ЯДРАМИ\n");
+    printf("CUBLAS С ТЕНЗОРНЫМИ ЯДРАМИ, Размеры: M=%d, N=%d, K=%d\n", M, N, K);
     printf("========================================================\n");
-    printf("Размеры: M=%d, N=%d, K=%d\n\n", M, N, K);
     
     struct TestConfig {
         const char* name;
@@ -91,9 +90,9 @@ int main(int argc, char* argv[]) {
     
     int num_configs = sizeof(configs) / sizeof(configs[0]);
     
-    printf("%-10s %-15s %-15s %-15s %-15s\n", 
+    printf("%-15s %-20s %-15s %-15s %-15s\n", 
            "Тип", "Время (с)", "GFLOPS", "GB/s", "C[0][0]");
-    printf("------------------------------------------------------------\n");
+    printf("----------------------------------------------------------------------------------------------\n");
     
     for (int i = 0; i < num_configs; i++) {
         auto& cfg = configs[i];
@@ -137,6 +136,8 @@ int main(int argc, char* argv[]) {
         free(h_B);
         free(h_C);
     }
+
+    printf("\n\n");
     
     return 0;
 }

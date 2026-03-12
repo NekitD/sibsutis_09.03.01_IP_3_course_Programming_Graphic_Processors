@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     }
     
     printf("========================================================\n");
-    printf("ОБЫЧНОЕ CUDA ЯДРО (FP32)\n");
+    printf("ОБЫЧНОЕ CUDA ЯДРО (FP32), Размеры: M=%d, N=%d, K=%d\n", M, N, K);
     printf("========================================================\n");
     printf("Размеры: M=%d, N=%d, K=%d\n", M, N, K);
     
@@ -79,6 +79,8 @@ int main(int argc, char* argv[]) {
     free(h_A);
     free(h_B);
     free(h_C);
+
+    printf("\n\n");
     
     return 0;
 }
