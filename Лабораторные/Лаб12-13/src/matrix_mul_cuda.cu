@@ -1,7 +1,6 @@
 #include "utils.h"
 
-__global__ void matrix_mul_cuda(const float* A, const float* B, float* C, 
-                                 int M, int N, int K) {
+__global__ void matrix_mul_cuda(const float* A, const float* B, float* C, int M, int N, int K) {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     
@@ -14,8 +13,7 @@ __global__ void matrix_mul_cuda(const float* A, const float* B, float* C,
     }
 }
 
-double run_cuda_kernel(int M, int N, int K, 
-                        const float* h_A, const float* h_B, float* h_C) {
+double run_cuda_kernel(int M, int N, int K, const float* h_A, const float* h_B, float* h_C) {
     
     float *d_A, *d_B, *d_C;
     size_t size_A = M * K * sizeof(float);
