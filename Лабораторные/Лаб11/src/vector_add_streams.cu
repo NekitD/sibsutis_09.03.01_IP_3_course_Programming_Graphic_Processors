@@ -97,14 +97,10 @@ double vector_add_parallel(int total_n, int chunk_size, int num_streams) {
         int threads = 256;
         int blocks = (current_size + threads - 1) / threads;
         
-        cudaMemcpyAsync(&d_a[offset], &h_a[offset], current_bytes, 
-                        cudaMemcpyHostToDevice, streams[stream_id]);
-        cudaMemcpyAsync(&d_b[offset], &h_b[offset], current_bytes, 
-                        cudaMemcpyHostToDevice, streams[stream_id]);
-        vector_add<<<blocks, threads, 0, streams[stream_id]>>>(
-            &d_a[offset], &d_b[offset], &d_c[offset], current_size);
-        cudaMemcpyAsync(&h_c[offset], &d_c[offset], current_bytes, 
-                        cudaMemcpyDeviceToHost, streams[stream_id]);
+        cudaMemcpyAsync(&d_a[offset], &h_a[offset], current_bytes, cudaMemcpyHostToDevice, streams[stream_id]);
+        cudaMemcpyAsync(&d_b[offset], &h_b[offset], current_bytes, cudaMemcpyHostToDevice, streams[stream_id]);
+        vector_add<<<blocks, threads, 0, streams[stream_id]>>>(&d_a[offset], &d_b[offset], &d_c[offset], current_size);
+        cudaMemcpyAsync(&h_c[offset], &d_c[offset], current_bytes, cudaMemcpyDeviceToHost, streams[stream_id]);
     }
     for (int i = 0; i < actual_streams; i++) {
         cudaStreamSynchronize(streams[i]);
@@ -121,14 +117,10 @@ double vector_add_parallel(int total_n, int chunk_size, int num_streams) {
         int threads = 256;
         int blocks = (current_size + threads - 1) / threads;
         
-        cudaMemcpyAsync(&d_a[offset], &h_a[offset], current_bytes, 
-                        cudaMemcpyHostToDevice, streams[stream_id]);
-        cudaMemcpyAsync(&d_b[offset], &h_b[offset], current_bytes, 
-                        cudaMemcpyHostToDevice, streams[stream_id]);
-        vector_add<<<blocks, threads, 0, streams[stream_id]>>>(
-            &d_a[offset], &d_b[offset], &d_c[offset], current_size);
-        cudaMemcpyAsync(&h_c[offset], &d_c[offset], current_bytes, 
-                        cudaMemcpyDeviceToHost, streams[stream_id]);
+        cudaMemcpyAsync(&d_a[offset], &h_a[offset], current_bytes, cudaMemcpyHostToDevice, streams[stream_id]);
+        cudaMemcpyAsync(&d_b[offset], &h_b[offset], current_bytes, cudaMemcpyHostToDevice, streams[stream_id]);
+        vector_add<<<blocks, threads, 0, streams[stream_id]>>>(&d_a[offset], &d_b[offset], &d_c[offset], current_size);
+        cudaMemcpyAsync(&h_c[offset], &d_c[offset], current_bytes, cudaMemcpyDeviceToHost, streams[stream_id]);
     }
     
     for (int i = 0; i < actual_streams; i++) {
