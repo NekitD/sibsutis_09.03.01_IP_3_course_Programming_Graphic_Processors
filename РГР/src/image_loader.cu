@@ -8,7 +8,7 @@
 
 float* load_and_preprocess_image(const char* filename, int* width, int* height) {
     int w, h, channels;
-    unsigned char* img = stbi_load(filename, &w, &h, &channels, 1); // 1 =灰度图
+    unsigned char* img = stbi_load(filename, &w, &h, &channels, 1);
     
     if (!img) {
         printf("Не удалось загрузить изображение: %s\n", filename);
