@@ -55,6 +55,11 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets,
 int evaluate(NeuralNetwork* net, float* test_inputs, int* test_labels, int test_size);
 void free_network(NeuralNetwork* net);
 
+float* load_digit_image(const char* filename);
+int predict(NeuralNetwork* net, float* image, int image_size); 
+int load_model(NeuralNetwork* net, const char* filename);
+void save_model(NeuralNetwork* net, const char* filename);
+
 // Dataset структура (из data_loader.cu)
 typedef struct {
     float* images;

@@ -50,15 +50,5 @@ float* load_digit_image(const char* filename) {
     
     printf("Загружено изображение: %s (%dx%d -> 28x28)\n", filename, w, h);
     
-    // Выводим мини-картинку для отладки
-    printf("Преобразованное изображение (10x10 preview):\n");
-    for (int y = 0; y < 10; y++) {
-        for (int x = 0; x < 10; x++) {
-            int val = (int)(img[y * 28 + x] * 10);
-            printf("%c", val > 5 ? '#' : (val > 2 ? '*' : '.'));
-        }
-        printf("\n");
-    }
-    
     return img;
 }

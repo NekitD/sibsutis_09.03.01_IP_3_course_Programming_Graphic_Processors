@@ -1,6 +1,6 @@
 CC = nvcc
 ARCH = -arch=sm_86
-CFLAGS = $(ARCH) -O2 -lineinfo -I$(SRCDIR)
+CFLAGS = $(ARCH) -O2 -lineinfo -I$(SRCDIR) -D_STB_IMAGE_IMPLEMENTATION
 
 SRCDIR = src
 OBJDIR = obj
@@ -9,7 +9,7 @@ IMGDIR = img
 
 TARGET = $(BINDIR)/neural_network
 
-SOURCES = $(SRCDIR)/neural_network.cu $(SRCDIR)/data_loader.cu
+SOURCES = $(SRCDIR)/neural_network.cu $(SRCDIR)/data_loader.cu $(SRCDIR)/image_loader.cu
 
 .PHONY: all clean run convert check-data
 
