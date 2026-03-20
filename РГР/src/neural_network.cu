@@ -24,7 +24,6 @@ typedef struct {
     float** d_nabla_b;    // градиенты смещений (device)
 } Gradients;
 
-// Функции-прототипы
 __global__ void feedforward_kernel(float* output, const float* input, const float* weights, const float* biases,
                                     int input_size, int output_size);
 __global__ void backprop_kernel(float* delta_next, float* delta_curr,
@@ -42,7 +41,6 @@ __global__ void zero_gradients_kernel(float* data, int size);
 __global__ void apply_gradients_kernel(float* weights, float* nabla_w,
                                         int size, float eta, int batch_size);
 
-// Функции host
 void init_network(NeuralNetwork* net, int* sizes, int num_layers);
 void init_gradients(NeuralNetwork* net, Gradients* grads);
 void free_gradients(NeuralNetwork* net, Gradients* grads);
@@ -60,7 +58,6 @@ int predict(NeuralNetwork* net, float* image, int image_size);
 int load_model(NeuralNetwork* net, const char* filename);
 void save_model(NeuralNetwork* net, const char* filename);
 
-// Dataset структура (из data_loader.cu)
 typedef struct {
     float* images;
     int* labels;
@@ -86,7 +83,6 @@ int main() {
     int sizes[] = {784, 30, 10};
     int num_layers = 3;
     
-    // Загрузка данных
     Dataset train, test;
     
     printf("\nЗагрузка данных MNIST...\n");
@@ -107,30 +103,26 @@ int main() {
     printf("Тестовая выборка: %d изображений\n", test.count);
     printf("Размер изображения: %d пикселей\n", train.image_size);
     
-    // Инициализация сети
     NeuralNetwork net;
     init_network(&net, sizes, num_layers);
     
-    // Параметры обучения
+    //----------ПАРАМЕТРЫ-------------------
     int epochs = 10;
     int batch_size = 32;
     float learning_rate = 0.1f;
+     //-------------------------------------
     
     printf("\nПараметры обучения:\n");
     printf("  Эпох: %d\n", epochs);
     printf("  Размер батча: %d\n", batch_size);
     printf("  Скорость обучения: %.3f\n", learning_rate);
     
-    // Обучение
     printf("\nНачало обучения...\n");
     printf("----------------------------------------\n");
     
     for (int epoch = 0; epoch < epochs; epoch++) {
         double start_time = get_time();
         
-        // Перемешиваем данные (для простоты пропустим)
-        
-        // Обучение по батчам
         int num_batches = train.count / batch_size;
         for (int batch = 0; batch < num_batches; batch++) {
             int offset = batch * batch_size;
@@ -147,7 +139,6 @@ int main() {
         
         double end_time = get_time();
         
-        // Оценка на тестовой выборке
         int correct = evaluate(&net, test.images, test.labels, test.count);
         float accuracy = 100.0f * correct / test.count;
         
@@ -157,25 +148,18 @@ int main() {
     
     printf("\nОбучение завершено!\n");
     
-    // Финальная оценка
     int final_accuracy = evaluate(&net, test.images, test.labels, test.count);
     printf("\nФинальная точность на тестовой выборке: %.2f%% (%d/%d)\n",
            100.0f * final_accuracy / test.count, final_accuracy, test.count);
 
-
-    // Сохраняем обученную модель
-    printf("\n========================================================\n");
-    printf("СОХРАНЕНИЕ МОДЕЛИ\n");
-    printf("========================================================\n");
     save_model(&net, "model_weights.bin");
     printf("Модель сохранена в model_weights.bin\n");
 
-    // Интерактивный режим тестирования
     printf("\n========================================================\n");
     printf("ТЕСТИРОВАНИЕ НА СОБСТВЕННЫХ ИЗОБРАЖЕНИЯХ\n");
     printf("========================================================\n");
     printf("Вы можете проверить работу сети на своих изображениях!\n");
-    printf("Формат: черно-белые изображения цифр (PNG, JPG)\n");
+    printf("Формат: PNG, JPG\n");
     printf("Изображения будут автоматически преобразованы к размеру 28x28\n");
     printf("Введите путь к файлу (или 'exit' для выхода):\n");
 
@@ -187,14 +171,11 @@ int main() {
         if (strcmp(filename, "exit") == 0) break;
         if (strcmp(filename, "quit") == 0) break;
     
-        // Загружаем изображение
         float* img = load_digit_image(filename);
         if (!img) {
             printf("Не удалось загрузить изображение. Попробуйте снова.\n");
             continue;
         }
-    
-        // Предсказываем
         predict(&net, img, 28*28);
     
         free(img);
@@ -202,7 +183,6 @@ int main() {
 
     printf("\nРабота завершена. Спасибо за использование!\n");
     
-    // Очистка
     free_network(&net);
     free_dataset(&train);
     free_dataset(&test);

@@ -19,7 +19,6 @@ int load_binary_dataset(const char* images_path, const char* labels_path,
         return -1;
     }
     
-    // Определяем размер файла
     fseek(f_images, 0, SEEK_END);
     long file_size = ftell(f_images);
     fseek(f_images, 0, SEEK_SET);
@@ -27,20 +26,16 @@ int load_binary_dataset(const char* images_path, const char* labels_path,
     dataset->image_size = expected_image_size;
     dataset->count = file_size / (dataset->image_size * sizeof(float));
     
-    // Выделяем память
     dataset->images = (float*)malloc(file_size);
     dataset->labels = (int*)malloc(dataset->count * sizeof(int));
     
-    // Читаем изображения
-    size_t read = fread(dataset->images, sizeof(float), 
-                        dataset->count * dataset->image_size, f_images);
+    size_t read = fread(dataset->images, sizeof(float), dataset->count * dataset->image_size, f_images);
     if (read != dataset->count * dataset->image_size) {
         printf("Failed to read images: read %zu, expected %d\n", 
                read, dataset->count * dataset->image_size);
         return -1;
     }
     
-    // Читаем метки
     read = fread(dataset->labels, sizeof(int), dataset->count, f_labels);
     if (read != dataset->count) {
         printf("Failed to read labels: read %zu, expected %d\n", read, dataset->count);

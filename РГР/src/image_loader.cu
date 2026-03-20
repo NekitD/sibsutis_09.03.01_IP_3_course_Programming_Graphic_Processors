@@ -6,9 +6,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-// Загрузка и предобработка изображения для MNIST
 float* load_and_preprocess_image(const char* filename, int* width, int* height) {
-    // Загружаем изображение
     int w, h, channels;
     unsigned char* img = stbi_load(filename, &w, &h, &channels, 1); // 1 =灰度图
     
@@ -20,10 +18,8 @@ float* load_and_preprocess_image(const char* filename, int* width, int* height) 
     *width = w;
     *height = h;
     
-    // Создаём массив для предобработанного изображения (28x28)
     float* processed = (float*)malloc(28 * 28 * sizeof(float));
     
-    // Масштабируем изображение до 28x28 (простой билинейный алгоритм)
     for (int y = 0; y < 28; y++) {
         for (int x = 0; x < 28; x++) {
             int src_x = x * w / 28;
@@ -32,7 +28,6 @@ float* load_and_preprocess_image(const char* filename, int* width, int* height) 
             if (src_y >= h) src_y = h - 1;
             
             float pixel = img[src_y * w + src_x] / 255.0f;
-            // Инвертируем, так как MNIST использует белый фон (0) и чёрную цифру (1)
             processed[y * 28 + x] = 1.0f - pixel;
         }
     }
