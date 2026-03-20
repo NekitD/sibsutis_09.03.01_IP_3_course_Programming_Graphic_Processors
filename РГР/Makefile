@@ -9,11 +9,7 @@ IMGDIR = img
 
 TARGET = $(BINDIR)/neural_network
 
-SOURCES = $(SRCDIR)/neural_network.cu
-UTILS = $(SRCDIR)/utils.h
-DATALOADER = $(SRCDIR)/data_loader.cu
-
-OBJECTS = $(OBJDIR)/neural_network.o
+SOURCES = $(SRCDIR)/neural_network.cu $(SRCDIR)/data_loader.cu
 
 .PHONY: all clean run convert check-data
 
@@ -39,32 +35,22 @@ check-data:
 		ls -lh $(IMGDIR)/*.bin; \
 	fi
 
-$(TARGET): $(SOURCES) $(UTILS) $(DATALOADER)
+$(TARGET): $(SOURCES)
 	@mkdir -p $(OBJDIR)
-	@echo "========================================================="
-	@echo "Компиляция нейросети для распознавания цифр"
-	@echo "========================================================="
-	$(CC) $(CFLAGS) $< -o $@
+	@ $(CC) $(CFLAGS) $^ -o $@
 	@echo "Создан исполняемый файл: $(TARGET)"
 
-
 run: $(TARGET)
-	@echo "========================================================="
 	@echo "ЗАПУСК НЕЙРОСЕТИ"
-	@echo "========================================================="
 	./$(TARGET)
 
 clean:
-	@echo "========================================================="
-	@echo "ОЧИСТКА"
-	@echo "========================================================="
-	rm -rf $(OBJDIR) $(TARGET)
+	@ rm -rf $(OBJDIR) $(TARGET)
 	@echo "Очистка завершена"
 
 clean-all: clean
-	@echo "Удаление бинарных данных..."
-	rm -f $(IMGDIR)/*.bin $(IMGDIR)/dims.txt
-	@echo "Полная очистка завершена"
+	@ rm -f $(IMGDIR)/*.bin $(IMGDIR)/dims.txt
+	@echo "Очистка завершена"
 
 info:
 	@echo "========================================================="
@@ -79,21 +65,22 @@ info:
 		echo "Бинарные данные не найдены"; \
 	fi
 
-check-data-size:
+help:
 	@echo "========================================================="
-	@echo "РАЗМЕРЫ ДАННЫХ"
+	@echo "ДОСТУПНЫЕ КОМАНДЫ"
 	@echo "========================================================="
-	@if [ -f $(IMGDIR)/train_images.bin ]; then \
-		echo "train_images.bin: $$(stat -c%s $(IMGDIR)/train_images.bin) байт"; \
-		echo "train_labels.bin: $$(stat -c%s $(IMGDIR)/train_labels.bin) байт"; \
-		echo "test_images.bin:  $$(stat -c%s $(IMGDIR)/test_images.bin) байт"; \
-		echo "test_labels.bin:  $$(stat -c%s $(IMGDIR)/test_labels.bin) байт"; \
-		echo ""; \
-		echo "Ожидаемые размеры для MNIST:"; \
-		echo "  train_images.bin: 50000 * 784 * 4 = 156,800,000 байт (~149.5 MB)"; \
-		echo "  train_labels.bin: 50000 * 4 = 200,000 байт (~195 KB)"; \
-		echo "  test_images.bin:  10000 * 784 * 4 = 31,360,000 байт (~29.9 MB)"; \
-		echo "  test_labels.bin:  10000 * 4 = 40,000 байт (~39 KB)"; \
-	fi
+	@echo "make               - проверить данные и собрать программу"
+	@echo "make run           - собрать и запустить нейросеть"
+	@echo "make clean         - удалить объектные файлы и исполняемый файл"
+	@echo "make clean-all     - полная очистка (включая бинарные данные)"
+	@echo "make info          - показать информацию о бинарных данных"
+	@echo "make help          - показать эту справку"
+	@echo ""
+	@echo "ПРИМЕЧАНИЕ:"
+	@echo "  Перед первой компиляцией необходимо иметь бинарные файлы в img/:"
+	@echo "    train_images.bin, train_labels.bin"
+	@echo "    test_images.bin, test_labels.bin"
+	@echo ""
+	@echo "  Для конвертации из mnist.pkl используйте скрипт convert_mnist.py"
 
-.PHONY: all clean clean-all run info check-data check-data-size
+.PHONY: all clean clean-all run info check-data help

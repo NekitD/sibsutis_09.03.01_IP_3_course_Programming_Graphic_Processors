@@ -67,6 +67,145 @@ int load_binary_dataset(const char* images_path, const char* labels_path,
                         Dataset* dataset, int expected_image_size);
 void free_dataset(Dataset* dataset);
 
+
+//------------------------------------------------------------------------------------------------------------
+// MAIN
+//------------------------------------------------------------------------------------------------------------
+
+int main() {
+    printf("========================================================\n");
+    printf("НЕЙРОСЕТЬ ДЛЯ РАСПОЗНАВАНИЯ ЦИФР (CUDA)\n");
+    printf("========================================================\n");
+    
+    // Архитектура сети: 784 входных, 30 скрытых, 10 выходных
+    int sizes[] = {784, 30, 10};
+    int num_layers = 3;
+    
+    // Загрузка данных
+    Dataset train, test;
+    
+    printf("\nЗагрузка данных MNIST...\n");
+    
+    if (load_binary_dataset("img/train_images.bin", "img/train_labels.bin", &train, 784) != 0) {
+        printf("Не удалось загрузить обучающую выборку!\n");
+        printf("Запустите convert_mnist.py для конвертации данных\n");
+        return -1;
+    }
+    
+    if (load_binary_dataset("img/test_images.bin", "img/test_labels.bin", &test, 784) != 0) {
+        printf("Не удалось загрузить тестовую выборку!\n");
+        free_dataset(&train);
+        return -1;
+    }
+    
+    printf("Обучающая выборка: %d изображений\n", train.count);
+    printf("Тестовая выборка: %d изображений\n", test.count);
+    printf("Размер изображения: %d пикселей\n", train.image_size);
+    
+    // Инициализация сети
+    NeuralNetwork net;
+    init_network(&net, sizes, num_layers);
+    
+    // Параметры обучения
+    int epochs = 10;
+    int batch_size = 32;
+    float learning_rate = 0.1f;
+    
+    printf("\nПараметры обучения:\n");
+    printf("  Эпох: %d\n", epochs);
+    printf("  Размер батча: %d\n", batch_size);
+    printf("  Скорость обучения: %.3f\n", learning_rate);
+    
+    // Обучение
+    printf("\nНачало обучения...\n");
+    printf("----------------------------------------\n");
+    
+    for (int epoch = 0; epoch < epochs; epoch++) {
+        double start_time = get_time();
+        
+        // Перемешиваем данные (для простоты пропустим)
+        
+        // Обучение по батчам
+        int num_batches = train.count / batch_size;
+        for (int batch = 0; batch < num_batches; batch++) {
+            int offset = batch * batch_size;
+            update_mini_batch(&net, 
+                              &train.images[offset * train.image_size],
+                              &train.labels[offset],
+                              batch_size, learning_rate);
+            
+            if ((batch + 1) % 100 == 0) {
+                printf("\r  Батч %d/%d", batch + 1, num_batches);
+                fflush(stdout);
+            }
+        }
+        
+        double end_time = get_time();
+        
+        // Оценка на тестовой выборке
+        int correct = evaluate(&net, test.images, test.labels, test.count);
+        float accuracy = 100.0f * correct / test.count;
+        
+        printf("\rЭпоха %2d: точность = %.2f%% (%d/%d), время = %.2f сек\n",
+               epoch + 1, accuracy, correct, test.count, end_time - start_time);
+    }
+    
+    printf("\nОбучение завершено!\n");
+    
+    // Финальная оценка
+    int final_accuracy = evaluate(&net, test.images, test.labels, test.count);
+    printf("\nФинальная точность на тестовой выборке: %.2f%% (%d/%d)\n",
+           100.0f * final_accuracy / test.count, final_accuracy, test.count);
+
+
+    // Сохраняем обученную модель
+    printf("\n========================================================\n");
+    printf("СОХРАНЕНИЕ МОДЕЛИ\n");
+    printf("========================================================\n");
+    save_model(&net, "model_weights.bin");
+    printf("Модель сохранена в model_weights.bin\n");
+
+    // Интерактивный режим тестирования
+    printf("\n========================================================\n");
+    printf("ТЕСТИРОВАНИЕ НА СОБСТВЕННЫХ ИЗОБРАЖЕНИЯХ\n");
+    printf("========================================================\n");
+    printf("Вы можете проверить работу сети на своих изображениях!\n");
+    printf("Формат: черно-белые изображения цифр (PNG, JPG)\n");
+    printf("Изображения будут автоматически преобразованы к размеру 28x28\n");
+    printf("Введите путь к файлу (или 'exit' для выхода):\n");
+
+    char filename[256];
+    while (1) {
+        printf("\n> ");
+        if (scanf("%255s", filename) != 1) break;
+    
+        if (strcmp(filename, "exit") == 0) break;
+        if (strcmp(filename, "quit") == 0) break;
+    
+        // Загружаем изображение
+        float* img = load_digit_image(filename);
+        if (!img) {
+            printf("Не удалось загрузить изображение. Попробуйте снова.\n");
+            continue;
+        }
+    
+        // Предсказываем
+        predict(&net, img, 28*28);
+    
+        free(img);
+    }
+
+    printf("\nРабота завершена. Спасибо за использование!\n");
+    
+    // Очистка
+    free_network(&net);
+    free_dataset(&train);
+    free_dataset(&test);
+    
+    return 0;
+}
+
+
 //------------------------------------------------------------------------------------------------------------
 // ЯДРА
 //------------------------------------------------------------------------------------------------------------
@@ -468,6 +607,45 @@ int evaluate(NeuralNetwork* net, float* test_inputs, int* test_labels, int test_
     return correct;
 }
 
+int predict(NeuralNetwork* net, float* image, int image_size) {
+    if (image_size != net->sizes[0]) {
+        printf("Ошибка: размер изображения %d, ожидается %d\n", 
+               image_size, net->sizes[0]);
+        return -1;
+    }
+    
+    // Прямое распространение
+    feedforward(net, image);
+    
+    // Получаем результат
+    float* h_output = (float*)malloc(net->sizes[net->num_layers - 1] * sizeof(float));
+    cudaMemcpy(h_output, net->d_activations[net->num_layers - 1],
+               net->sizes[net->num_layers - 1] * sizeof(float),
+               cudaMemcpyDeviceToHost);
+    
+    // Находим класс с максимальной вероятностью
+    int predicted = 0;
+    float max_val = h_output[0];
+    for (int j = 1; j < net->sizes[net->num_layers - 1]; j++) {
+        if (h_output[j] > max_val) {
+            max_val = h_output[j];
+            predicted = j;
+        }
+    }
+    
+    printf("Предсказание: цифра %d (вероятность: %.2f%%)\n", 
+           predicted, max_val * 100);
+    
+    // Выводим все вероятности
+    printf("Вероятности:\n");
+    for (int j = 0; j < net->sizes[net->num_layers - 1]; j++) {
+        printf("  %d: %.2f%%\n", j, h_output[j] * 100);
+    }
+    
+    free(h_output);
+    return predicted;
+}
+
 void free_network(NeuralNetwork* net) {
     for (int l = 0; l < net->num_layers - 1; l++) {
         free(net->h_weights[l]);
@@ -493,99 +671,81 @@ void free_network(NeuralNetwork* net) {
     free(net->d_zs);
 }
 
-//------------------------------------------------------------------------------------------------------------
-// MAIN
-//------------------------------------------------------------------------------------------------------------
+// Сохранение весов и смещений в файл
+void save_model(NeuralNetwork* net, const char* filename) {
+    FILE* f = fopen(filename, "wb");
+    if (!f) {
+        printf("Не удалось создать файл %s\n", filename);
+        return;
+    }
+    
+    // Сохраняем архитектуру
+    fwrite(&net->num_layers, sizeof(int), 1, f);
+    for (int l = 0; l < net->num_layers; l++) {
+        fwrite(&net->sizes[l], sizeof(int), 1, f);
+    }
+    
+    // Сохраняем веса
+    for (int l = 0; l < net->num_layers - 1; l++) {
+        int input_size = net->sizes[l];
+        int output_size = net->sizes[l + 1];
+        int weight_size = output_size * input_size;
+        
+        fwrite(net->h_weights[l], sizeof(float), weight_size, f);
+        fwrite(net->h_biases[l], sizeof(float), output_size, f);
+    }
+    
+    fclose(f);
+}
 
-int main() {
-    printf("========================================================\n");
-    printf("НЕЙРОСЕТЬ ДЛЯ РАСПОЗНАВАНИЯ ЦИФР (CUDA)\n");
-    printf("========================================================\n");
-    
-    // Архитектура сети: 784 входных, 30 скрытых, 10 выходных
-    int sizes[] = {784, 30, 10};
-    int num_layers = 3;
-    
-    // Загрузка данных
-    Dataset train, test;
-    
-    printf("\nЗагрузка данных MNIST...\n");
-    
-    if (load_binary_dataset("img/train_images.bin", "img/train_labels.bin", &train, 784) != 0) {
-        printf("Не удалось загрузить обучающую выборку!\n");
-        printf("Запустите convert_mnist.py для конвертации данных\n");
+// Загрузка модели из файла
+int load_model(NeuralNetwork* net, const char* filename) {
+    FILE* f = fopen(filename, "rb");
+    if (!f) {
+        printf("Файл %s не найден\n", filename);
         return -1;
     }
     
-    if (load_binary_dataset("img/test_images.bin", "img/test_labels.bin", &test, 784) != 0) {
-        printf("Не удалось загрузить тестовую выборку!\n");
-        free_dataset(&train);
+    int num_layers;
+    fread(&num_layers, sizeof(int), 1, f);
+    
+    if (num_layers != net->num_layers) {
+        printf("Несовместимая архитектура: %d vs %d\n", num_layers, net->num_layers);
+        fclose(f);
         return -1;
     }
     
-    printf("Обучающая выборка: %d изображений\n", train.count);
-    printf("Тестовая выборка: %d изображений\n", test.count);
-    printf("Размер изображения: %d пикселей\n", train.image_size);
-    
-    // Инициализация сети
-    NeuralNetwork net;
-    init_network(&net, sizes, num_layers);
-    
-    // Параметры обучения
-    int epochs = 10;
-    int batch_size = 32;
-    float learning_rate = 0.1f;
-    
-    printf("\nПараметры обучения:\n");
-    printf("  Эпох: %d\n", epochs);
-    printf("  Размер батча: %d\n", batch_size);
-    printf("  Скорость обучения: %.3f\n", learning_rate);
-    
-    // Обучение
-    printf("\nНачало обучения...\n");
-    printf("----------------------------------------\n");
-    
-    for (int epoch = 0; epoch < epochs; epoch++) {
-        double start_time = get_time();
-        
-        // Перемешиваем данные (для простоты пропустим)
-        
-        // Обучение по батчам
-        int num_batches = train.count / batch_size;
-        for (int batch = 0; batch < num_batches; batch++) {
-            int offset = batch * batch_size;
-            update_mini_batch(&net, 
-                              &train.images[offset * train.image_size],
-                              &train.labels[offset],
-                              batch_size, learning_rate);
-            
-            if ((batch + 1) % 100 == 0) {
-                printf("\r  Батч %d/%d", batch + 1, num_batches);
-                fflush(stdout);
-            }
+    // Проверяем размеры слоёв
+    int* loaded_sizes = (int*)malloc(num_layers * sizeof(int));
+    for (int l = 0; l < num_layers; l++) {
+        fread(&loaded_sizes[l], sizeof(int), 1, f);
+        if (loaded_sizes[l] != net->sizes[l]) {
+            printf("Несовместимый размер слоя %d: %d vs %d\n", 
+                   l, loaded_sizes[l], net->sizes[l]);
+            free(loaded_sizes);
+            fclose(f);
+            return -1;
         }
+    }
+    free(loaded_sizes);
+    
+    // Загружаем веса
+    for (int l = 0; l < net->num_layers - 1; l++) {
+        int input_size = net->sizes[l];
+        int output_size = net->sizes[l + 1];
+        int weight_size = output_size * input_size;
         
-        double end_time = get_time();
+        fread(net->h_weights[l], sizeof(float), weight_size, f);
+        fread(net->h_biases[l], sizeof(float), output_size, f);
         
-        // Оценка на тестовой выборке
-        int correct = evaluate(&net, test.images, test.labels, test.count);
-        float accuracy = 100.0f * correct / test.count;
-        
-        printf("\rЭпоха %2d: точность = %.2f%% (%d/%d), время = %.2f сек\n",
-               epoch + 1, accuracy, correct, test.count, end_time - start_time);
+        // Обновляем устройство
+        cudaMemcpy(net->d_weights[l], net->h_weights[l],
+                   weight_size * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(net->d_biases[l], net->h_biases[l],
+                   output_size * sizeof(float), cudaMemcpyHostToDevice);
     }
     
-    printf("\nОбучение завершено!\n");
-    
-    // Финальная оценка
-    int final_accuracy = evaluate(&net, test.images, test.labels, test.count);
-    printf("\nФинальная точность на тестовой выборке: %.2f%% (%d/%d)\n",
-           100.0f * final_accuracy / test.count, final_accuracy, test.count);
-    
-    // Очистка
-    free_network(&net);
-    free_dataset(&train);
-    free_dataset(&test);
-    
+    fclose(f);
+    printf("Модель загружена из %s\n", filename);
     return 0;
 }
