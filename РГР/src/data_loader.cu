@@ -15,7 +15,7 @@ int load_binary_dataset(const char* images_path, const char* labels_path,
     FILE* f_labels = fopen(labels_path, "rb");
     
     if (!f_images || !f_labels) {
-        printf("Failed to open files: %s or %s\n", images_path, labels_path);
+        printf("Не удалось открыть файлы: %s or %s\n", images_path, labels_path);
         return -1;
     }
     
@@ -31,21 +31,21 @@ int load_binary_dataset(const char* images_path, const char* labels_path,
     
     size_t read = fread(dataset->images, sizeof(float), dataset->count * dataset->image_size, f_images);
     if (read != dataset->count * dataset->image_size) {
-        printf("Failed to read images: read %zu, expected %d\n", 
+        printf("Не удалось прочитать изображения: прочитано %zu, ожидалось %d\n", 
                read, dataset->count * dataset->image_size);
         return -1;
     }
     
     read = fread(dataset->labels, sizeof(int), dataset->count, f_labels);
     if (read != dataset->count) {
-        printf("Failed to read labels: read %zu, expected %d\n", read, dataset->count);
+        printf("Не удалось прочитать метки: прочитано %zu, ожидалось %d\n", read, dataset->count);
         return -1;
     }
     
     fclose(f_images);
     fclose(f_labels);
     
-    printf("Loaded %d images, size %d\n", dataset->count, dataset->image_size);
+    printf("Загружено %d изображений, размером %d\n", dataset->count, dataset->image_size);
     return 0;
 }
 
