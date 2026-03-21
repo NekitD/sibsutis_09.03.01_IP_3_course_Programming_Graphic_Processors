@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <ctime>
 
 typedef struct {
     int* sizes;           // размеры слоёв
@@ -232,8 +233,8 @@ __global__ void accumulate_weights_gradient_kernel(float* nabla_w, const float* 
     int total = output_size * input_size;
     if (idx >= total) return;
     
-    int j = idx / input_size;   // нейрон в текущем слое
-    int i = idx % input_size;   // нейрон в предыдущем слое
+    int j = idx / input_size;   
+    int i = idx % input_size;   
     
     atomicAdd(&nabla_w[idx], delta[j] * activation_prev[i]);
 }
@@ -265,8 +266,6 @@ __global__ void apply_gradients_kernel(float* weights, float* nabla_w,
 void init_network(NeuralNetwork* net, int* sizes, int num_layers) {
     net->sizes = sizes;
     net->num_layers = num_layers;
-    
-    // Выделение памяти на хосте
     net->h_weights = (float**)malloc((num_layers - 1) * sizeof(float*));
     net->h_biases = (float**)malloc((num_layers - 1) * sizeof(float*));
     net->d_weights = (float**)malloc((num_layers - 1) * sizeof(float*));
@@ -275,21 +274,17 @@ void init_network(NeuralNetwork* net, int* sizes, int num_layers) {
     net->d_activations = (float**)malloc(num_layers * sizeof(float*));
     net->d_zs = (float**)malloc((num_layers - 1) * sizeof(float*));
     
-    // Выделение памяти для целевого значения
     cudaMalloc(&net->d_target, sizes[num_layers - 1] * sizeof(float));
     
-    // Инициализация весов и смещений случайными значениями
-    srand(42);
+    srand(time(NULL));
     for (int l = 0; l < num_layers - 1; l++) {
         int input_size = sizes[l];
         int output_size = sizes[l + 1];
         int weight_size = output_size * input_size;
         
-        // Выделение на хосте
         net->h_weights[l] = (float*)malloc(weight_size * sizeof(float));
         net->h_biases[l] = (float*)malloc(output_size * sizeof(float));
         
-        // Инициализация случайными числами (Xavier initialization)
         float scale = sqrtf(2.0f / input_size);
         for (int i = 0; i < weight_size; i++) {
             net->h_weights[l][i] = ((float)rand() / RAND_MAX - 0.5f) * 2.0f * scale;
@@ -297,21 +292,17 @@ void init_network(NeuralNetwork* net, int* sizes, int num_layers) {
         for (int i = 0; i < output_size; i++) {
             net->h_biases[l][i] = 0.0f;
         }
-        
-        // Копирование на устройство
         cudaMalloc(&net->d_weights[l], weight_size * sizeof(float));
         cudaMalloc(&net->d_biases[l], output_size * sizeof(float));
         cudaMemcpy(net->d_weights[l], net->h_weights[l], weight_size * sizeof(float), cudaMemcpyHostToDevice);
         cudaMemcpy(net->d_biases[l], net->h_biases[l], output_size * sizeof(float), cudaMemcpyHostToDevice);
     }
     
-    // Выделение памяти для активаций
     for (int l = 0; l < num_layers; l++) {
         net->h_activations[l] = (float*)malloc(sizes[l] * sizeof(float));
         cudaMalloc(&net->d_activations[l], sizes[l] * sizeof(float));
     }
     
-    // Выделение памяти для z-значений
     for (int l = 0; l < num_layers - 1; l++) {
         cudaMalloc(&net->d_zs[l], sizes[l + 1] * sizeof(float));
     }
@@ -345,7 +336,7 @@ void free_gradients(NeuralNetwork* net, Gradients* grads) {
 }
 
 void feedforward(NeuralNetwork* net, const float* input) {
-    // Копирование входного слоя
+
     cudaMemcpy(net->d_activations[0], input, net->sizes[0] * sizeof(float), cudaMemcpyHostToDevice);
     
     int threads = 256;
@@ -387,7 +378,6 @@ void backprop_single(NeuralNetwork* net, const float* input, const float* target
     int num_layers = net->num_layers;
     int threads = 256;
     
-    // Копируем вход и target на устройство
     if (input) {
         cudaMemcpyAsync(net->d_activations[0], input, net->sizes[0] * sizeof(float), 
                         cudaMemcpyHostToDevice, stream);
@@ -397,22 +387,19 @@ void backprop_single(NeuralNetwork* net, const float* input, const float* target
                         cudaMemcpyHostToDevice, stream);
     }
     
-    // Прямое распространение
     feedforward_stream(net, stream);
     
-    // 2. Вычисление ошибки выходного слоя
     int output_size = net->sizes[num_layers - 1];
     int blocks = (output_size + threads - 1) / threads;
     
     compute_output_delta_kernel<<<blocks, threads, 0, stream>>>(
-        net->d_zs[num_layers - 2],  // используем d_zs как временное хранилище для delta
+        net->d_zs[num_layers - 2], 
         net->d_activations[num_layers - 1],
         net->d_target,
         net->d_zs[num_layers - 2],
         output_size
     );
     
-    // 3. Накопление градиентов для выходного слоя
     int prev_size = net->sizes[num_layers - 2];
     int weight_size = output_size * prev_size;
     blocks = (weight_size + threads - 1) / threads;
@@ -431,23 +418,20 @@ void backprop_single(NeuralNetwork* net, const float* input, const float* target
         output_size
     );
     
-    // 4. Обратное распространение для скрытых слоёв
     for (int l = num_layers - 2; l >= 1; l--) {
         int curr_size = net->sizes[l];
         int next_size = net->sizes[l + 1];
         int prev_size_curr = net->sizes[l - 1];
         
-        // Вычисляем delta для текущего слоя
         blocks = (curr_size + threads - 1) / threads;
         backprop_kernel<<<blocks, threads, 0, stream>>>(
-            net->d_zs[l],           // delta_next
-            net->d_zs[l - 1],       // delta_curr
-            net->d_weights[l],      // weights_next
-            net->d_zs[l - 1],       // z_curr
+            net->d_zs[l],           
+            net->d_zs[l - 1],      
+            net->d_weights[l],     
+            net->d_zs[l - 1],       
             curr_size, next_size
         );
         
-        // Накопление градиентов для текущего слоя
         weight_size = curr_size * prev_size_curr;
         blocks = (weight_size + threads - 1) / threads;
         
@@ -475,7 +459,6 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets,
     static float* d_targets = NULL;
     static cudaStream_t stream;
     
-    // Однократная инициализация
     if (!initialized) {
         init_gradients(net, &grads);
         cudaStreamCreate(&stream);
@@ -485,13 +468,11 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets,
     int input_size = net->sizes[0];
     int output_size = net->sizes[net->num_layers - 1];
     
-    // Выделяем память для батча на устройстве (один раз)
     if (!d_inputs) {
         cudaMalloc(&d_inputs, batch_size * input_size * sizeof(float));
         cudaMalloc(&d_targets, batch_size * output_size * sizeof(float));
     }
     
-    // Обнуляем градиенты перед обработкой батча
     for (int l = 0; l < net->num_layers - 1; l++) {
         int input_sz = net->sizes[l];
         int output_sz = net->sizes[l + 1];
@@ -504,7 +485,6 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets,
     }
     cudaDeviceSynchronize();
     
-    // Преобразуем метки в one-hot векторы
     float* h_onehot_targets = (float*)malloc(batch_size * output_size * sizeof(float));
     for (int i = 0; i < batch_size; i++) {
         for (int j = 0; j < output_size; j++) {
@@ -512,13 +492,11 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets,
         }
     }
     
-    // Копируем входные данные и target на устройство
     cudaMemcpy(d_inputs, h_inputs, batch_size * input_size * sizeof(float), 
                cudaMemcpyHostToDevice);
     cudaMemcpy(d_targets, h_onehot_targets, batch_size * output_size * sizeof(float),
                cudaMemcpyHostToDevice);
     
-    // Обрабатываем каждый пример в батче
     for (int i = 0; i < batch_size; i++) {
         backprop_single(net, 
                         &d_inputs[i * input_size],
@@ -528,7 +506,6 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets,
     
     cudaStreamSynchronize(stream);
     
-    // Применяем накопленные градиенты к весам и смещениям
     int threads = 256;
     for (int l = 0; l < net->num_layers - 1; l++) {
         int input_sz = net->sizes[l];
@@ -545,7 +522,6 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets,
     }
     cudaDeviceSynchronize();
     
-    // Копируем обновлённые веса на хост (для сохранения)
     for (int l = 0; l < net->num_layers - 1; l++) {
         int input_sz = net->sizes[l];
         int output_sz = net->sizes[l + 1];
@@ -565,7 +541,6 @@ int evaluate(NeuralNetwork* net, float* test_inputs, int* test_labels, int test_
     for (int i = 0; i < test_size; i++) {
         feedforward(net, &test_inputs[i * net->sizes[0]]);
         
-        // Получаем результат
         float* h_output = (float*)malloc(net->sizes[net->num_layers - 1] * sizeof(float));
         cudaMemcpy(h_output, net->d_activations[net->num_layers - 1],
                    net->sizes[net->num_layers - 1] * sizeof(float),
@@ -595,16 +570,13 @@ int predict(NeuralNetwork* net, float* image, int image_size) {
         return -1;
     }
     
-    // Прямое распространение
     feedforward(net, image);
     
-    // Получаем результат
     float* h_output = (float*)malloc(net->sizes[net->num_layers - 1] * sizeof(float));
     cudaMemcpy(h_output, net->d_activations[net->num_layers - 1],
                net->sizes[net->num_layers - 1] * sizeof(float),
                cudaMemcpyDeviceToHost);
     
-    // Находим класс с максимальной вероятностью
     int predicted = 0;
     float max_val = h_output[0];
     for (int j = 1; j < net->sizes[net->num_layers - 1]; j++) {
@@ -617,7 +589,6 @@ int predict(NeuralNetwork* net, float* image, int image_size) {
     printf("Предсказание: цифра %d (вероятность: %.2f%%)\n", 
            predicted, max_val * 100);
     
-    // Выводим все вероятности
     printf("Вероятности:\n");
     for (int j = 0; j < net->sizes[net->num_layers - 1]; j++) {
         printf("  %d: %.2f%%\n", j, h_output[j] * 100);
@@ -652,7 +623,6 @@ void free_network(NeuralNetwork* net) {
     free(net->d_zs);
 }
 
-// Сохранение весов и смещений в файл
 void save_model(NeuralNetwork* net, const char* filename) {
     FILE* f = fopen(filename, "wb");
     if (!f) {
@@ -660,13 +630,11 @@ void save_model(NeuralNetwork* net, const char* filename) {
         return;
     }
     
-    // Сохраняем архитектуру
     fwrite(&net->num_layers, sizeof(int), 1, f);
     for (int l = 0; l < net->num_layers; l++) {
         fwrite(&net->sizes[l], sizeof(int), 1, f);
     }
     
-    // Сохраняем веса
     for (int l = 0; l < net->num_layers - 1; l++) {
         int input_size = net->sizes[l];
         int output_size = net->sizes[l + 1];
@@ -679,7 +647,6 @@ void save_model(NeuralNetwork* net, const char* filename) {
     fclose(f);
 }
 
-// Загрузка модели из файла
 int load_model(NeuralNetwork* net, const char* filename) {
     FILE* f = fopen(filename, "rb");
     if (!f) {
@@ -696,7 +663,6 @@ int load_model(NeuralNetwork* net, const char* filename) {
         return -1;
     }
     
-    // Проверяем размеры слоёв
     int* loaded_sizes = (int*)malloc(num_layers * sizeof(int));
     for (int l = 0; l < num_layers; l++) {
         fread(&loaded_sizes[l], sizeof(int), 1, f);
@@ -710,7 +676,6 @@ int load_model(NeuralNetwork* net, const char* filename) {
     }
     free(loaded_sizes);
     
-    // Загружаем веса
     for (int l = 0; l < net->num_layers - 1; l++) {
         int input_size = net->sizes[l];
         int output_size = net->sizes[l + 1];
@@ -719,7 +684,6 @@ int load_model(NeuralNetwork* net, const char* filename) {
         fread(net->h_weights[l], sizeof(float), weight_size, f);
         fread(net->h_biases[l], sizeof(float), output_size, f);
         
-        // Обновляем устройство
         cudaMemcpy(net->d_weights[l], net->h_weights[l],
                    weight_size * sizeof(float), cudaMemcpyHostToDevice);
         cudaMemcpy(net->d_biases[l], net->h_biases[l],
