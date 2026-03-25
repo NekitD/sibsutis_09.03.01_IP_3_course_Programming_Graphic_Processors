@@ -4,23 +4,23 @@
 #include <ctime>
 
 typedef struct {
-    int* sizes;           // размеры слоёв
-    int num_layers;       // количество слоёв
+    int* sizes; // размеры слоёв
+    int num_layers; // количество слоёв
     
-    float** h_weights;    // веса (host)
-    float** h_biases;     // смещения (host)
-    float** d_weights;    // веса (device)
-    float** d_biases;     // смещения (device)
+    float** h_weights; // веса (host)
+    float** h_biases; // смещения (host)
+    float** d_weights; // веса (device)
+    float** d_biases; // смещения (device)
     
     float** h_activations; // активации (host)
     float** d_activations; // активации (device)
-    float** d_zs;          // z-значения (device)
-    float* d_target;       // целевое значение для текущего примера (device)
+    float** d_zs; // z-значения (device)
+    float* d_target; // целевое значение для текущего примера (device)
 } NeuralNetwork;
 
 typedef struct {
-    float** d_nabla_w;    // градиенты весов (device)
-    float** d_nabla_b;    // градиенты смещений (device)
+    float** d_nabla_w; // градиенты весов (device)
+    float** d_nabla_b; // градиенты смещений (device)
 } Gradients;
 
 __global__ void feedforward_kernel(float* output, const float* input, const float* weights, const float* biases,
