@@ -4,19 +4,13 @@ import numpy as np
 import struct
 
 def save_binary(filename, data):
-    """Сохраняет данные в бинарный файл"""
     with open(filename, 'wb') as f:
         f.write(data.tobytes())
 
 def convert_mnist_pkl():
-    # Загрузка данных из pkl
     with gzip.open('img/mnist.pkl.gz', 'rb') as f:
         training_data, validation_data, test_data = pickle.load(f, encoding='latin1')
     
-    # training_data: (images, labels)
-    # images: (50000, 784) - float, labels: (50000,) - int
-    
-    # Извлекаем данные
     train_images, train_labels = training_data
     val_images, val_labels = validation_data
     test_images, test_labels = test_data
