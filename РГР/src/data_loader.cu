@@ -9,8 +9,7 @@ typedef struct {
     int image_size;
 } Dataset;
 
-int load_binary_dataset(const char* images_path, const char* labels_path, 
-                        Dataset* dataset, int expected_image_size) {
+int load_binary_dataset(const char* images_path, const char* labels_path, Dataset* dataset, int expected_image_size) {
     FILE* f_images = fopen(images_path, "rb");
     FILE* f_labels = fopen(labels_path, "rb");
     
