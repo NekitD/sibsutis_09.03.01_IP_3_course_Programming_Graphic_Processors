@@ -451,8 +451,7 @@ void backprop_single(NeuralNetwork* net, const float* input, const float* target
     }
 }
 
-void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets, 
-                       int batch_size, float eta) {
+void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets, int batch_size, float eta) {
     static Gradients grads;
     static int initialized = 0;
     static float* d_inputs = NULL;
