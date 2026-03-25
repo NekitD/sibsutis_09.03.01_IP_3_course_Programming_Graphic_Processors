@@ -491,16 +491,11 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets, int 
         }
     }
     
-    cudaMemcpy(d_inputs, h_inputs, batch_size * input_size * sizeof(float), 
-               cudaMemcpyHostToDevice);
-    cudaMemcpy(d_targets, h_onehot_targets, batch_size * output_size * sizeof(float),
-               cudaMemcpyHostToDevice);
+    cudaMemcpy(d_inputs, h_inputs, batch_size * input_size * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_targets, h_onehot_targets, batch_size * output_size * sizeof(float), cudaMemcpyHostToDevice);
     
     for (int i = 0; i < batch_size; i++) {
-        backprop_single(net, 
-                        &d_inputs[i * input_size],
-                        &d_targets[i * output_size],
-                        &grads, stream);
+        backprop_single(net, &d_inputs[i * input_size],&d_targets[i * output_size], &grads, stream);
     }
     
     cudaStreamSynchronize(stream);
@@ -526,12 +521,10 @@ void update_mini_batch(NeuralNetwork* net, float* h_inputs, int* h_targets, int 
         int output_sz = net->sizes[l + 1];
         int weight_size = output_sz * input_sz;
         
-        cudaMemcpy(net->h_weights[l], net->d_weights[l],
-                   weight_size * sizeof(float), cudaMemcpyDeviceToHost);
-        cudaMemcpy(net->h_biases[l], net->d_biases[l],
-                   output_sz * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(net->h_weights[l], net->d_weights[l], weight_size * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(net->h_biases[l], net->d_biases[l], output_sz * sizeof(float), cudaMemcpyDeviceToHost);
     }
-    
+
     free(h_onehot_targets);
 }
 
